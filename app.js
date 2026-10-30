@@ -56,7 +56,7 @@
   const saveKV = (k, v) => DB.put('kv', { k, v });
 
   // ------------------------------------------------------------ Zustand
-  const DEFAULT_PROFILE = { age: '', height: '', gender: '', hair: '', skin: '', unterton: '', farbtyp: '', favColors: [], nogoColors: [], styles: [], sensitivity: 'normal', dresscode: 'businesscasual', location: null };
+  const DEFAULT_PROFILE = { age: '', height: '', gender: '', hair: '', skin: '', unterton: '', farbtyp: '', favColors: [], nogoColors: [], styles: [], sensitivity: 'normal', dresscode: 'businesscasual', location: null, colorDot: 'an' };
   const S = {
     view: 'outfits', items: [], urls: new Map(), photoBytes: 0, profile: Object.assign({}, DEFAULT_PROFILE), learn: {}, rated: [], history: [], meta: {}, pin: null,
     day: 0, occasion: 'alltag', pinnedId: null, seed: 0, result: null,
@@ -186,13 +186,13 @@
     const worn = S.history.some(h => h.date === S.result.date && h.key === o.key);
     const mainS = o.slots.onepiece ? ['onepiece'] : ['top', 'bottom'];
     const main = mainS.map(s => it(s) ? tileHTML(it(s), { act: 'tile', data: 'data-o="' + idx + '" data-slot="' + s + '"', pin: o.slots[s] === S.pinnedId }) : '').join('');
-    const slotLabel = (s, x) => s === 'mid' && typeOf(x).layerOk ? shortName(x) + ' offen' : s === 'under' ? shortName(x) + ' drunter' : shortName(x) + tightsWord(x);
+    const slotLabel = (s, x) => s === 'mid' && typeOf(x).layerOk ? shortName(x) + ' offen' : s === 'under' ? shortName(x) + (x.type === 'kragen' ? '' : ' drunter') : shortName(x) + tightsWord(x);
     const extras = ['under', 'mid', 'layer', 'outer', 'legs', 'shoes'].filter(s => it(s)).map(s => tileHTML(it(s), { act: 'tile', data: 'data-o="' + idx + '" data-slot="' + s + '"', label: slotLabel(s, it(s)), pin: o.slots[s] === S.pinnedId, aria: itemLabel(it(s)) }))
       .concat((o.acc || []).map(id => byId(id)).filter(Boolean).map(a => tileHTML(a, { act: 'tile', data: 'data-o="' + idx + '" data-slot="acc" data-id="' + a.id + '"', label: shortName(a), pin: a.id === S.pinnedId, aria: itemLabel(a) }))).join('');
     const why = o.plus.slice(0, 4).map(x => '<li>' + esc(x) + '</li>').join('') + o.minus.map(x => '<li class="neg">' + esc(x) + '</li>').join('') + o.warn.map(x => '<li class="warn">' + esc(x) + '</li>').join('') +
       (o.tips || []).map(x => '<li class="tip"><b>Tipp:</b> ' + esc(x) + '</li>').join('');
     return '<article class="outfit" aria-label="Vorschlag ' + (idx + 1) + '">' +
-      '<div class="outfit-top"><span class="n">Vorschlag ' + (idx + 1) + '</span>' + (o.style ? '<span class="style-tag">' + esc(o.style) + '</span>' : '') + '</div>' +
+      '<div class="outfit-top"><span class="n">Vorschlag ' + (idx + 1) + '</span>' + '<span class="tags">' + (o.look ? '<span class="look-tag">' + esc(o.look) + '</span>' : '') + (o.style ? '<span class="style-tag">' + esc(o.style) + '</span>' : '') + '</span></div>' +
       '<div class="lay-main' + (mainS.length === 1 ? ' one' : '') + '">' + main + '</div>' +
       (extras ? '<div class="lay-extra">' + extras + '</div>' : '') +
       (o.layers && o.layers.length ? '<p class="layers"><span>Lagen von innen nach außen</span> ' + o.layers.map(esc).join(' › ') + '</p>' : '') +
@@ -216,7 +216,8 @@
     const occs = ['arbeit', 'alltag', 'party', 'elegant'].map(k => chip('occ', 'data-k="' + k + '"', E.OCCASIONS[k].name, S.occasion === k)).join('');
     let h = '<div class="view"><div class="head"><h1>Was ziehe ich an?</h1></div>' +
       '<div class="seg" role="group" aria-label="Tag">' + days + '</div>' +
-      '<div class="chips occ" role="group" aria-label="Anlass">' + occs + '</div>' + weatherHTML();
+      '<div class="chips occ" role="group" aria-label="Anlass">' + occs + '</div>' +
+      (E.OCCASIONS[S.occasion] && E.OCCASIONS[S.occasion].hint ? '<p class="occ-hint">' + esc(E.OCCASIONS[S.occasion].hint) + '</p>' : '') + weatherHTML();
 
     const needProfile = !(S.profile.styles || []).length;
     if (S.items.length < 3 || needProfile) {
@@ -255,6 +256,7 @@
     const seg = [['alle', 'Alle Teile', S.items.length], ['lieblinge', 'Lieblinge', nFav], ['aussortieren', 'Aussortieren', rv.length]]
       .map(([k, n, c]) => '<button data-act="smode" data-k="' + k + '" aria-pressed="' + (S.smode === k) + '">' + n + '<small>' + c + '</small></button>').join('');
     let h = '<div class="view has-fab' + (S.selMode ? ' has-sel' : '') + '"><div class="head"><h1>Schrank</h1><span class="muted">' + S.items.length + ' Teile</span></div>' +
+      '<button class="linkbtn" data-act="glossary" data-k="oberteile" style="margin:-4px 0 10px">Was ist was? Kleidungsstücke erklärt</button>' +
       '<div class="seg" role="group" aria-label="Ansicht">' + seg + '</div>';
 
     if (S.smode === 'aussortieren') {
@@ -327,7 +329,9 @@
     tshirt: 'shirt', top: 'shirt', polo: 'shirt', body: 'shirt', bluse: 'shirt+collar', hemd: 'long+collar', langarm: 'long', pullover: 'long', rollkragen: 'long', sweatshirt: 'long', hoodie: 'long',
     cardigan: 'long+open', blazer: 'long+lapel', sweatjacke: 'long+open', weste: 'vest',
     jeans: 'trousers', stoffhose: 'trousers', chino: 'trousers', leggings: 'trousers', jogginghose: 'trousers', cargohose: 'trousers', weitehose: 'wide', shorts: 'shorts', rock_kurz: 'miniskirt', rock_lang: 'skirt',
-    kleid_kurz: 'dress', kleid_lang: 'dress', jumpsuit: 'dress', traegerkleid: 'slip', overshirt: 'long+collar', strumpfhose: 'tights',
+    kleid_kurz: 'dress', kleid_lang: 'dress', jumpsuit: 'dress', traegerkleid: 'slip', strickkleid: 'dress', kragen: 'vest+collar', blusenkleid: 'dress', abendkleid: 'slip', latzhose: 'trousers',
+    cardigan_top: 'long+open', strickshirt: 'shirt', tunika: 'long', crop: 'shirt', corsage: 'vest', longcardigan: 'coat+open', kimono: 'coat+open', steppweste: 'vest', cape: 'coat',
+    overknees: 'boot', boots: 'boot', mules: 'shoe', espadrilles: 'shoe', bootsschuhe: 'shoe', krawatte: 'belt', haarschmuck: 'belt', overshirt: 'long+collar', strumpfhose: 'tights',
     jeansjacke: 'long+open', lederjacke: 'long+lapel', blouson: 'long+open', uebergang: 'coat+open', regenjacke: 'coat+open', trench: 'coat+lapel', mantel: 'coat+lapel', parka: 'coat+open', winterjacke: 'coat+open',
     sneaker: 'shoe', laufschuhe: 'shoe', ballerinas: 'shoe', loafer: 'shoe', derby: 'shoe', pumps: 'heel', slingbacks: 'heel', sandaletten: 'heel', sandalen: 'sandal', stiefeletten: 'boot', stiefel: 'boot', winterstiefel: 'boot',
     tasche: 'bag', schal: 'scarf', tuch: 'scarf', einstecktuch: 'scarf', hut: 'hat', muetze: 'beanie', cap: 'beanie', handschuhe: 'beanie', guertel: 'belt', sonnenbrille: 'glasses', schmuck: 'ring', uhr: 'ring'
@@ -424,9 +428,10 @@
     let h = '<div class="view"><div class="head"><h1>Profil</h1></div>';
     h += '<section class="card"><h2>Stil</h2><p class="muted small">Mehrfachauswahl. Jeder Stil hat eigene Regeln – etwa welche Farben zusammenpassen, wie viele Muster er verträgt und wie die Lagen aufeinander folgen.</p><div class="chips stylechips">' +
       Object.entries(E.STYLES).map(([k, s]) => chip('pf-multi', 'data-k="styles" data-v="' + k + '"', esc(s.name) + '<small>' + esc(s.desc) + '</small>', (P.styles || []).includes(k))).join('') + '</div>' +
-      '<button class="btn" data-act="rules" style="margin-top:12px">Farb- und Lagenregeln ansehen</button></section>';
+      '<div class="row" style="margin-top:12px"><button class="btn" data-act="rules">Farb- und Lagenregeln ansehen</button><button class="btn" data-act="glossary" data-k="stile">Stile erklärt</button></div></section>';
     h += '<section class="card"><h2>Farben</h2><label class="f">Lieblingsfarben</label><div class="chips">' + E.COLORS.map(c => swatchChip('pf-multi', 'data-k="favColors" data-v="' + c.id + '"', c.id, (P.favColors || []).includes(c.id))).join('') + '</div>' +
-      '<label class="f">No-Go-Farben <small>– Teile in diesen Farben schlage ich nicht vor</small></label><div class="chips">' + E.COLORS.map(c => swatchChip('pf-multi', 'data-k="nogoColors" data-v="' + c.id + '"', c.id, (P.nogoColors || []).includes(c.id))).join('') + '</div></section>';
+      '<label class="f">No-Go-Farben <small>– Teile in diesen Farben schlage ich nicht vor</small></label><div class="chips">' + E.COLORS.map(c => swatchChip('pf-multi', 'data-k="nogoColors" data-v="' + c.id + '"', c.id, (P.nogoColors || []).includes(c.id))).join('') + '</div>' +
+      '<label class="f">Farbtupfer <small>– Camel, Cognac, Dunkelblau oder Bordeaux zählen auch, ebenso Tuch, Schal oder Tasche</small></label>' + one('colorDot', [['an', 'Jedes Outfit bekommt einen'], ['aus', 'Schwarz, Weiß und Grau sind okay']]) + '</section>';
     h += '<section class="card"><h2>Typ</h2>' +
       '<label class="f">Farbtyp</label>' + one('farbtyp', [['fruehling', 'Frühling'], ['sommer', 'Sommer'], ['herbst', 'Herbst'], ['winter', 'Winter'], ['', 'Weiß ich nicht']]) +
       '<label class="f">Hautunterton <small>– zählt, wenn du deinen Farbtyp nicht kennst</small></label>' + one('unterton', [['warm', 'Warm'], ['kuehl', 'Kühl'], ['neutral', 'Neutral'], ['', 'Weiß ich nicht']]) +
@@ -435,7 +440,11 @@
       '<label class="f">Haarfarbe</label>' + one('hair', [['blond', 'Blond'], ['braun', 'Braun'], ['schwarz', 'Schwarz'], ['rot', 'Rot'], ['grau', 'Grau / Weiß'], ['andere', 'Andere']]) +
       '<div class="two-col"><div><label class="f" for="pf-age">Alter</label><input id="pf-age" type="number" inputmode="numeric" min="10" max="110" data-field="age" value="' + esc(P.age) + '"></div>' +
       '<div><label class="f" for="pf-h">Größe in cm</label><input id="pf-h" type="number" inputmode="numeric" min="100" max="230" data-field="height" value="' + esc(P.height) + '"></div></div>' +
-      '<label class="f">Geschlecht <small>– nur für passende Styling-Tipps, etwa „Bluse in den Bund stecken“</small></label>' + one('gender', [['w', 'Weiblich'], ['m', 'Männlich'], ['d', 'Divers'], ['', 'Keine Angabe']]) + '</section>';
+      '<label class="f">Geschlecht <small>– nur für passende Styling-Tipps, etwa „Bluse in den Bund stecken“</small></label>' + one('gender', [['w', 'Weiblich'], ['m', 'Männlich'], ['d', 'Divers'], ['', 'Keine Angabe']]) +
+      '<label class="f">Figurtyp <small>– so gleicht die App Proportionen aus</small></label>' + one('figur', Object.entries(E.FIGURES).map(([k, f]) => [k, f.name]).concat([['', 'Weiß ich nicht']])) +
+      (E.FIGURES[P.figur] ? '<p class="muted small" style="margin-top:8px"><b>' + esc(E.FIGURES[P.figur].look) + '.</b> ' + esc(E.FIGURES[P.figur].aim) + '.</p>' :
+        '<p class="muted small" style="margin-top:8px">Vor dem Spiegel: Sind die Hüften breiter als die Schultern (A), die Schultern breiter (V), alles etwa gleich breit (H), die Taille deutlich schmaler bei gleich breiten Schultern und Hüften (X), oder liegt das meiste Volumen in der Körpermitte (O)?</p>') +
+      (parseInt(P.height, 10) > 0 && parseInt(P.height, 10) < 160 ? '<p class="muted small">Unter 160 cm: Ich achte auf Ton in Ton und etwas Absatz zu Midilängen.</p>' : '') + '</section>';
     h += '<section class="card"><h2>Alltag</h2><label class="f">Temperaturempfinden</label>' + one('sensitivity', [['friert', 'Friere schnell'], ['normal', 'Normal'], ['schwitzt', 'Schwitze schnell']]) +
       '<label class="f">Dresscode bei der Arbeit</label>' + one('dresscode', [['locker', 'Locker'], ['businesscasual', 'Business Casual'], ['business', 'Business']]) +
       (S.learn && Math.abs(S.learn.tempOffset || 0) >= 0.7 ? '<p class="muted small" style="margin-top:8px">Aus deinen Bewertungen gelernt: Ich rechne mit ' + (S.learn.tempOffset < 0 ? 'etwas kälter' : 'etwas wärmer') + ' als vorhergesagt (' + (S.learn.tempOffset > 0 ? '+' : '−') + Math.abs(S.learn.tempOffset).toFixed(1).replace('.', ',') + ' °C).</p>' : '') + '</section>';
@@ -452,7 +461,7 @@
       '<div class="row"><button class="btn tape-btn" data-act="backup">Sicherung erstellen</button><button class="btn" data-act="restore">Sicherung laden</button></div>' +
       '<label class="f">Speicherplatz</label><p class="muted small" id="storage">' + S.items.length + ' Teile, Fotos zusammen ' + mb(S.photoBytes) + '.</p>' +
       '<div class="row" style="margin-top:14px"><button class="btn ghost" data-act="learn-reset">Gelerntes zurücksetzen</button><button class="btn ghost danger" data-act="wipe">Alle Daten löschen</button></div></section>';
-    return h + '<p class="muted small" style="text-align:center">Mein Kleiderschrank, Version 1.3</p></div>';
+    return h + '<p class="muted small" style="text-align:center">Mein Kleiderschrank, Version 1.5</p></div>';
   }
 
   // ------------------------------------------------------------ Rendern
@@ -559,7 +568,10 @@
 
     h += '<label class="f">Was ist es?</label><div class="chips scroll">' + E.CATEGORIES.map(c => chip('ed-cat', 'data-k="' + c.id + '"', esc(c.name), ED.cat === c.id)).join('') + '</div>' +
       '<div class="typegrid" style="margin-top:10px">' + Object.entries(E.TYPES).filter(([, d]) => E.CATEGORIES.find(c => c.id === ED.cat).slots.includes(d.slot))
-        .map(([k, d]) => chip('ed-type', 'data-k="' + k + '"', '<span class="em" aria-hidden="true">' + d.icon + '</span>' + esc(d.name), it.type === k)).join('') + '</div>';
+        .map(([k, d]) => chip('ed-type', 'data-k="' + k + '"', '<span class="em" aria-hidden="true">' + d.icon + '</span>' + esc(d.name), it.type === k)).join('') + '</div>' +
+      (it.type && E.INFO[it.type] ? '<p class="type-info">' + esc(E.INFO[it.type][0]) + ' <a href="' + 'https://duckduckgo.com/?ia=images&iax=images&q=' + encodeURIComponent(E.INFO[it.type][1]) + '" target="_blank" rel="noopener noreferrer">Beispielbilder</a></p>' : '') +
+      '<button class="linkbtn" data-act="ed-info">' + (ED.showInfo ? 'Erklärungen ausblenden' : 'Was ist was? Alle Teile dieser Gruppe erklärt') + '</button>' +
+      (ED.showInfo ? '<div class="gl-list">' + Object.entries(E.TYPES).filter(([, d]) => E.CATEGORIES.find(c => c.id === ED.cat).slots.includes(d.slot)).map(([k, d]) => glItem(d.icon, d.name, (E.INFO[k] || [''])[0], (E.INFO[k] || [, d.name])[1])).join('') + '</div>' : '');
 
     if (t) {
       const slot = t.slot;
@@ -584,8 +596,22 @@
       if (['top', 'mid', 'bottom', 'onepiece'].includes(slot)) {
         h += '<label class="f">Passform</label><div class="chips">' + Object.entries(E.FITS).map(([k, n]) => chip('ed-fit', 'data-k="' + k + '"', n, (it.fit || 'normal') === k)).join('') + '</div>';
       }
+      const attr = (f, label, hint, opts, cur) => '<label class="f">' + label + (hint ? ' <small>– ' + hint + '</small>' : '') + '</label><div class="chips">' +
+        opts.map(([v, n]) => chip('ed-attr', 'data-f="' + f + '" data-k="' + v + '"', n, String(cur) === String(v))).join('') + '</div>';
+      if (t.legCut && !t.legCutFixed) h += attr('legCut', 'Bein', 'wichtig für die passenden Schuhe', Object.entries(E.LEG_CUTS), E.legCutOf(it));
+      if (t.lens) h += attr('length', 'Länge', null, t.lens.map(k => [k, E.LENGTHS[k]]), E.lengthOf(it));
+      if (t.shape) h += attr('shape', 'Form', null, Object.entries(E.SKIRT_SHAPES), E.shapeOf(it));
+      if (t.sleevesEdit) h += attr('sleeves', 'Ärmel', null, Object.entries(E.SLEEVES), E.sleevesOf(it));
+      if (t.collarEdit) h += attr('collar', 'Kragen', null, [[true, 'Mit Kragen'], [false, 'Ohne Kragen']], E.hasCollar(it));
+      if (t.neckEdit) h += attr('neck', 'Ausschnitt', null, t.neckEdit.map(k => [k, E.NECKS[k]]), E.neckOf(it));
+      if (t.heelEdit) h += attr('heel', 'Absatz', 'wichtig für Bootcut, Party und Alltag', Object.entries(E.HEELS), E.heelOf(it));
+      if ((t.knit || ['cardigan', 'weste'].includes(it.type) || E.scratchyDefault(it)) && ['top', 'mid', 'onepiece'].includes(slot))
+        h += attr('scratchy', 'Auf der Haut', 'kratzt es, plane ich etwas Dünnes darunter', [[true, 'Kratzt'], [false, 'Kratzt nicht']], E.isScratchy(it));
       if (!['other'].includes(slot) && !['schal', 'muetze', 'handschuhe', 'sonnenbrille', 'cap'].includes(it.type)) {
-        h += '<label class="f">Wirkung <small>– wie schick ist das Teil?</small></label><div class="scale" role="group" aria-label="Wirkung">' + [1, 2, 3, 4, 5].map(n => '<button data-act="ed-formality" data-n="' + n + '" aria-pressed="' + (it.formality === n) + '"><b>' + n + '</b>' + E.FORMALITY[n] + '</button>').join('') + '</div>';
+        const [lo, hi] = E.fRange(it);
+        h += '<label class="f">Wirkung <small>– die meisten Teile sind neutral, erst die Kombination macht sie lässig oder schick</small></label><div class="chips">' +
+          Object.entries(E.VIBES).map(([k, n]) => chip('ed-vibe', 'data-k="' + k + '"', n, E.vibeOf(it) === k)).join('') + '</div>' +
+          '<p class="muted small" style="margin:6px 0 0">Spielraum: ' + spanWord(lo) + ' bis ' + spanWord(hi) + '. Wähle „Macht lässig“ oder „Macht schick“ nur, wenn das Teil den Look deutlich prägt – etwa ein Logo-Shirt oder ein Paillettentop.</p>';
       }
       h += '<label class="f">Zustand <small>– sieht man es dem Teil an?</small></label><div class="chips">' + Object.entries(E.CONDITION).map(([k, n]) => chip('ed-cond', 'data-k="' + k + '"', n, (it.condition || 'gut') === k)).join('') + '</div>';
       h += '<label class="f">Wo ist das Teil gerade?</label><div class="chips">' + Object.entries(E.STATUS).map(([k, n]) => chip('ed-status', 'data-k="' + k + '"', n, (it.status || 'verfuegbar') === k)).join('') + '</div>';
@@ -756,6 +782,18 @@
       Object.entries(REASONS).map(([k, n]) => '<button class="btn block" data-act="dislike-reason" data-o="' + idx + '" data-r="' + k + '">' + esc(n) + '</button>').join('') + '</div>';
   }
 
+  // „Was ist was?“: Kleidungsstücke und Stile erklärt
+  let GL = { cat: 'oberteile' };
+  const spanWord = v => v < 1.7 ? 'sehr lässig' : v < 2.4 ? 'lässig' : v < 3.1 ? 'lässig-schick' : v < 4.3 ? 'schick' : 'festlich';
+  const glItem = (icon, name, text, q) => '<div class="gl-item">' + (icon ? '<span class="em" aria-hidden="true">' + icon + '</span>' : '') + '<div><b>' + esc(name) + '</b><p>' + esc(text) + '</p></div>' +
+    '<a class="btn" href="' + 'https://duckduckgo.com/?ia=images&iax=images&q=' + encodeURIComponent(q) + '" target="_blank" rel="noopener noreferrer" aria-label="Beispielbilder für ' + esc(name) + '">Bilder</a></div>';
+  function glossarySheet() {
+    let h = sheetHead('Was ist was?') + '<div class="chips scroll">' + E.CATEGORIES.map(c => chip('gl-cat', 'data-k="' + c.id + '"', esc(c.name), GL.cat === c.id)).join('') + chip('gl-cat', 'data-k="stile"', 'Stile', GL.cat === 'stile') + '</div><div class="gl-list">';
+    if (GL.cat === 'stile') h += Object.entries(E.STYLES).map(([k, st]) => glItem('', st.name, st.desc, E.STYLE_IMG[k] || st.name + ' Outfit')).join('');
+    else { const c = E.CATEGORIES.find(x => x.id === GL.cat) || E.CATEGORIES[0]; h += Object.entries(E.TYPES).filter(([, d]) => c.slots.includes(d.slot)).map(([k, d]) => glItem(d.icon, d.name, (E.INFO[k] || [''])[0], (E.INFO[k] || [, d.name])[1])).join(''); }
+    return h + '</div><p class="muted small" style="margin-top:12px">„Bilder“ öffnet eine Bildersuche im Browser.</p>';
+  }
+
   // Farb- und Lagenregeln der gewählten Stile
   function rulesSheet() {
     const ids = (S.profile.styles || []).length ? S.profile.styles : Object.keys(E.STYLES);
@@ -781,7 +819,19 @@
       '<li>Dünne Lagen innen, dickere außen. Weites passt nicht unter Enges, ein Sakko nicht unter die Leder- oder Jeansjacke.</li>' +
       '<li>Drei Lagen nur, wenn es kühl ist und der Stil sie mag. Über 20 °C schlage ich keine dritte Lage vor.</li>' +
       '<li>Unter Rock und Kleid: bei Kühle blickdichte Strumpfhose, am besten im Ton von Schuhen oder Rock. Unter der Hose nur bei Frost.</li>' +
-      '<li>Helle Schuhe zu dunkler, blickdichter Strumpfhose unterbrechen das Bein. Gemusterte Strumpfhose nur zu einfarbigem Rock oder Kleid.</li></ul></section>';
+      '<li>Helle Schuhe zu dunkler, blickdichter Strumpfhose unterbrechen das Bein. Gemusterte Strumpfhose nur zu einfarbigem Rock oder Kleid.</li>' +
+      '<li>Kratzige Wolle nie direkt auf die Haut: darunter ein dünnes Teil mit langen Ärmeln. Strickkleider immer mit Strumpfhose oder Leggings.</li>' +
+      '<li>Schuhe zum Schnitt: keine Stiefel mit Schaft zur Schlaghose, dafür Absatz oder Stiefeletten. Röhre passt in Stiefel. Zum Midirock Stiefel, die unter dem Saum verschwinden, zum engen Rock Absatz.</li>' +
+      '<li>Weit trifft schmal: weite oder ausgestellte Hose zu schmalem Oberteil und umgekehrt.</li>' +
+      '<li>Kein kurzärmliges Hemd unter dem Sakko. Ärmellos im Büro nur mit Blazer oder Strickjacke darüber.</li>' +
+      '<li>Ein Statement-Teil genügt, der Rest bleibt ruhig. Muster nur mischen, wenn sie eine Farbe teilen – nie zweimal dasselbe Muster.</li>' +
+      '<li>Entweder Bein oder Schulter zeigen, nicht beides. Jeans zu Jeans nur in zwei verschiedenen Waschungen.</li>' +
+      '<li>Wirkung: Basics passen sich an, prägende Teile bestimmen den Look. Ein einzelnes lässiges Teil im schicken Outfit ist bei manchen Stilen ein gewollter Stilbruch.</li>' +
+      '<li>Ein drittes Teil – Blazer, Strickjacke, Gürtel oder Tuch – macht ein Outfit komplett.</li>' +
+      (S.profile.colorDot === 'aus' ? '' : '<li>Jedes Outfit bekommt einen Farbtupfer. Das kann auch Camel, Cognac oder Dunkelblau sein, oder ein Tuch, ein Schal oder eine Tasche.</li>') +
+      '</ul></section>' +
+      (E.FIGURES[S.profile.figur] ? '<section class="rules"><h3>Figurtyp ' + esc(E.FIGURES[S.profile.figur].name) + '</h3><p>' + esc(E.FIGURES[S.profile.figur].aim) + '.</p></section>' : '') +
+      '<section class="rules"><h3>Anlässe</h3><ul class="plain">' + ['alltag', 'arbeit', 'party', 'elegant'].map(k => '<li><b>' + esc(E.OCCASIONS[k].name) + ':</b> ' + esc(E.OCCASIONS[k].hint) + '</li>').join('') + '</ul></section>';
     return h;
   }
 
@@ -941,7 +991,7 @@
       S.profile.location = { mode: 'city', lat: r.lat, lon: r.lon, name: r.label };
       S.city = { q: '', results: null, busy: false }; saveProfile(); toast('Ort gespeichert: ' + r.label); refreshWeather(true); rerender();
     },
-    pf(el) { const k = el.dataset.k, v = el.dataset.v; S.profile[k] = (S.profile[k] === v && ['farbtyp', 'unterton', 'skin', 'hair', 'gender'].includes(k)) ? '' : v; saveProfile(); invalidate(); rerender(); },
+    pf(el) { const k = el.dataset.k, v = el.dataset.v; S.profile[k] = (S.profile[k] === v && ['farbtyp', 'unterton', 'skin', 'hair', 'gender', 'figur'].includes(k)) ? '' : v; saveProfile(); invalidate(); rerender(); },
     'pf-multi'(el) {
       const k = el.dataset.k, v = el.dataset.v, arr = (S.profile[k] || []).slice(); const i = arr.indexOf(v);
       if (i >= 0) arr.splice(i, 1); else arr.push(v);
@@ -1053,6 +1103,11 @@
     'ed-warmth'(el) { ED.item.warmth = +el.dataset.n; ED.touched.warmth = true; refreshSheet(); },
     'ed-formality'(el) { ED.item.formality = +el.dataset.n; ED.touched.formality = true; refreshSheet(); },
     'ed-fit'(el) { ED.item.fit = el.dataset.k; refreshSheet(); },
+    'ed-vibe'(el) { ED.item.vibe = el.dataset.k; refreshSheet(); },
+    'ed-info'() { ED.showInfo = !ED.showInfo; refreshSheet(); },
+    'glossary'(el) { GL.cat = el.dataset.k || 'oberteile'; openSheet(glossarySheet, 'Was ist was?'); },
+    'gl-cat'(el) { GL.cat = el.dataset.k; refreshSheet(true); },
+    'ed-attr'(el) { const v = el.dataset.k; ED.item[el.dataset.f] = v === 'true' ? true : v === 'false' ? false : v; refreshSheet(); },
     'ed-status'(el) { ED.item.status = el.dataset.k; refreshSheet(); },
     'ed-cond'(el) { ED.item.condition = el.dataset.k; refreshSheet(); },
     'ed-fav'() { ED.item.fav = !ED.item.fav; refreshSheet(); },

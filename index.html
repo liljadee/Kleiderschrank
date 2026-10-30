@@ -137,6 +137,27 @@ p { margin: 0 0 10px; max-width: 60ch; }
 .tile .badge { position: absolute; left: 6px; top: 6px; background: var(--surface); color: var(--ink); border-radius: 999px; font-size: 12px; padding: 2px 8px; box-shadow: var(--shadow); }
 .tile .pinmark { position: absolute; right: 6px; top: 6px; font-size: 15px; }
 .why { list-style: none; margin: 12px 4px 0; padding: 0; font-size: 14.5px; }
+.layers { margin: 10px 4px 0; font-size: 14.5px; }
+.layers span { display: block; font-size: 12.5px; color: var(--ink-3); }
+
+/* Farb- und Lagenregeln */
+.rules { background: var(--surface); border-radius: 14px; padding: 2px 14px 6px; margin: 12px 0; }
+.rules h3 { margin: 12px 0 8px; }
+.rrow { display: grid; grid-template-columns: 92px 1fr; gap: 10px; padding: 9px 0; border-top: 1px solid var(--line); font-size: 14.5px; }
+.rk { color: var(--ink-2); font-size: 13.5px; }
+.rule-dots { display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.rd { display: inline-flex; align-items: center; gap: 5px; }
+.rd .dot, .pair .dot { width: 14px; height: 14px; }
+.pairs, .plain { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.pairs li { display: flex; align-items: center; gap: 8px; }
+.pair { display: inline-flex; flex: none; }
+.pair .dot + .dot { margin-left: -4px; }
+.pairs.bad li { color: var(--ink-2); }
+.plain li { position: relative; padding-left: 14px; }
+.plain li::before { content: ""; position: absolute; left: 1px; top: .55em; width: 6px; height: 6px; border-radius: 50%; background: var(--tape); }
+.rules > .plain { padding: 2px 0 8px; }
+@media (max-width: 380px) { .rrow { grid-template-columns: 1fr; gap: 4px; } }
+
 .why li { position: relative; padding-left: 22px; margin: 3px 0; }
 .why li::before { content: "✓"; position: absolute; left: 2px; color: var(--like); font-weight: 600; }
 .why li.neg::before { content: "!"; left: 6px; color: var(--nope); }

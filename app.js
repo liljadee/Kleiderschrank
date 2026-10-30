@@ -20,8 +20,9 @@
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const typeOf = it => E.TYPES[it.type] || E.TYPES.sonstiges;
   const colorOf = id => E.COLOR[id] || E.COLOR.grau;
-  const itemLabel = it => typeOf(it).name + ', ' + colorOf(it.colors && it.colors[0]).name;
-  const shortName = it => typeOf(it).name.replace(/ \(.*\)/, '').split(' / ')[0];
+  const itemLabel = it => typeOf(it).name + ', ' + colorOf(it.colors && it.colors[0]).name + (it.type === 'strumpfhose' ? ', ' + E.TIGHTS[it.warmth || 2] : '');
+  const tightsWord = it => it.type === 'strumpfhose' ? ' ' + E.TIGHTS[it.warmth || 2] : '';
+  const shortName = it => { const n = typeOf(it).name.replace(/ \(.*\)/, '').split(' / '); return n[0].endsWith('-') && n[1] ? n[1] : n[0]; };
   const byId = id => S.items.find(i => i.id === id);
   const catOfType = type => { const t = E.TYPES[type]; if (!t) return 'oberteile'; const c = E.CATEGORIES.find(c => c.slots.includes(t.slot)); return c ? c.id : 'accessoires'; };
   const mb = b => (b / 1048576).toFixed(b < 10485760 ? 1 : 0).replace('.', ',') + ' MB';
@@ -185,7 +186,8 @@
     const worn = S.history.some(h => h.date === S.result.date && h.key === o.key);
     const mainS = o.slots.onepiece ? ['onepiece'] : ['top', 'bottom'];
     const main = mainS.map(s => it(s) ? tileHTML(it(s), { act: 'tile', data: 'data-o="' + idx + '" data-slot="' + s + '"', pin: o.slots[s] === S.pinnedId }) : '').join('');
-    const extras = ['mid', 'outer', 'shoes'].filter(s => it(s)).map(s => tileHTML(it(s), { act: 'tile', data: 'data-o="' + idx + '" data-slot="' + s + '"', label: shortName(it(s)), pin: o.slots[s] === S.pinnedId, aria: itemLabel(it(s)) }))
+    const slotLabel = (s, x) => s === 'mid' && typeOf(x).layerOk ? shortName(x) + ' offen' : s === 'under' ? shortName(x) + ' drunter' : shortName(x) + tightsWord(x);
+    const extras = ['under', 'mid', 'layer', 'outer', 'legs', 'shoes'].filter(s => it(s)).map(s => tileHTML(it(s), { act: 'tile', data: 'data-o="' + idx + '" data-slot="' + s + '"', label: slotLabel(s, it(s)), pin: o.slots[s] === S.pinnedId, aria: itemLabel(it(s)) }))
       .concat((o.acc || []).map(id => byId(id)).filter(Boolean).map(a => tileHTML(a, { act: 'tile', data: 'data-o="' + idx + '" data-slot="acc" data-id="' + a.id + '"', label: shortName(a), pin: a.id === S.pinnedId, aria: itemLabel(a) }))).join('');
     const why = o.plus.slice(0, 4).map(x => '<li>' + esc(x) + '</li>').join('') + o.minus.map(x => '<li class="neg">' + esc(x) + '</li>').join('') + o.warn.map(x => '<li class="warn">' + esc(x) + '</li>').join('') +
       (o.tips || []).map(x => '<li class="tip"><b>Tipp:</b> ' + esc(x) + '</li>').join('');
@@ -193,6 +195,7 @@
       '<div class="outfit-top"><span class="n">Vorschlag ' + (idx + 1) + '</span>' + (o.style ? '<span class="style-tag">' + esc(o.style) + '</span>' : '') + '</div>' +
       '<div class="lay-main' + (mainS.length === 1 ? ' one' : '') + '">' + main + '</div>' +
       (extras ? '<div class="lay-extra">' + extras + '</div>' : '') +
+      (o.layers && o.layers.length ? '<p class="layers"><span>Lagen von innen nach außen</span> ' + o.layers.map(esc).join(' › ') + '</p>' : '') +
       (why ? '<ul class="why">' + why + '</ul>' : '') +
       '<div class="oact' + (isToday ? '' : ' two') + '">' +
       '<button class="btn like" data-act="like" data-o="' + idx + '" aria-pressed="' + liked + '">' + (liked ? '♥ Gemerkt' : '♡ Gefällt mir') + '</button>' +
@@ -310,6 +313,8 @@
     skirt: 'M36 14H64L80 88H20Z',
     miniskirt: 'M35 22H65L77 70H23Z',
     dress: 'M40 8H46Q50 15 54 8H60L63 30 57 40 79 93H21L43 40 37 30Z',
+    slip: 'M41 8H44L45 22Q50 25 55 22L56 8H59L62 32 58 42 78 93H22L42 42 38 32Z',
+    tights: 'M31 8H69L67 52 63 94H53L50 40 47 94H37L33 52Z',
     shoe: 'M8 64Q10 50 24 52L42 54Q54 42 70 45Q88 49 92 64V72H8Z',
     heel: 'M10 46Q14 44 20 47Q42 60 72 60Q88 60 91 68V73H34L29 88H21V66Q13 60 10 46Z',
     boot: 'M33 12H57V58Q60 65 77 67Q91 69 91 79V86H30V64Z',
@@ -322,7 +327,7 @@
     tshirt: 'shirt', top: 'shirt', polo: 'shirt', body: 'shirt', bluse: 'shirt+collar', hemd: 'long+collar', langarm: 'long', pullover: 'long', rollkragen: 'long', sweatshirt: 'long', hoodie: 'long',
     cardigan: 'long+open', blazer: 'long+lapel', sweatjacke: 'long+open', weste: 'vest',
     jeans: 'trousers', stoffhose: 'trousers', chino: 'trousers', leggings: 'trousers', jogginghose: 'trousers', cargohose: 'trousers', weitehose: 'wide', shorts: 'shorts', rock_kurz: 'miniskirt', rock_lang: 'skirt',
-    kleid_kurz: 'dress', kleid_lang: 'dress', jumpsuit: 'dress',
+    kleid_kurz: 'dress', kleid_lang: 'dress', jumpsuit: 'dress', traegerkleid: 'slip', overshirt: 'long+collar', strumpfhose: 'tights',
     jeansjacke: 'long+open', lederjacke: 'long+lapel', blouson: 'long+open', uebergang: 'coat+open', regenjacke: 'coat+open', trench: 'coat+lapel', mantel: 'coat+lapel', parka: 'coat+open', winterjacke: 'coat+open',
     sneaker: 'shoe', laufschuhe: 'shoe', ballerinas: 'shoe', loafer: 'shoe', derby: 'shoe', pumps: 'heel', slingbacks: 'heel', sandaletten: 'heel', sandalen: 'sandal', stiefeletten: 'boot', stiefel: 'boot', winterstiefel: 'boot',
     tasche: 'bag', schal: 'scarf', tuch: 'scarf', einstecktuch: 'scarf', hut: 'hat', muetze: 'beanie', cap: 'beanie', handschuhe: 'beanie', guertel: 'belt', sonnenbrille: 'glasses', schmuck: 'ring', uhr: 'ring'
@@ -356,7 +361,7 @@
       '<h3>' + esc(r.title) + '</h3><div class="gap-colors">' + r.colors.map(c => '<span class="dot" style="background:' + colorOf(c).hex + '"></span>').join('') + '<span>' + esc(colorTxt) + (mat ? ',' + esc(mat) : '') + '</span></div>' +
       '<p>' + esc(r.why) + '</p>' +
       '<div class="row"><a class="btn" href="https://duckduckgo.com/?ia=images&iax=images&q=' + encodeURIComponent(q) + '" target="_blank" rel="noopener noreferrer">Beispielbilder</a>' +
-      '<button class="btn" data-act="gap-have" data-type="' + r.type + '" data-c="' + r.colors[0] + '" data-m="' + (r.need ? r.need[0] : (r.mats && r.mats.length === 1 ? r.mats[0] : '')) + '" aria-label="Hab ich schon – im Schrank hinzufügen">Hab ich</button>' +
+      '<button class="btn" data-act="gap-have" data-type="' + r.type + '" data-c="' + r.colors[0] + '" data-m="' + (r.need ? r.need[0] : (r.mats && r.mats.length === 1 ? r.mats[0] : '')) + '"' + (r.warmth ? ' data-w="' + r.warmth + '"' : '') + ' aria-label="Hab ich schon – im Schrank hinzufügen">Hab ich</button>' +
       '<button class="linkbtn" data-act="gap-hide" data-id="' + esc(r.id) + '">Ausblenden</button></div></div></article>';
   }
   function viewErgaenzen() {
@@ -417,8 +422,9 @@
     const one = (k, opts) => '<div class="chips">' + opts.map(([v, n]) => chip('pf', 'data-k="' + k + '" data-v="' + v + '"', n, P[k] === v)).join('') + '</div>';
     const loc = P.location;
     let h = '<div class="view"><div class="head"><h1>Profil</h1></div>';
-    h += '<section class="card"><h2>Stil</h2><p class="muted small">Mehrfachauswahl. Jeder Stil hat eigene Regeln – etwa wie viele Farben und Muster er verträgt oder welche Schuhe dazugehören.</p><div class="chips stylechips">' +
-      Object.entries(E.STYLES).map(([k, s]) => chip('pf-multi', 'data-k="styles" data-v="' + k + '"', esc(s.name) + '<small>' + esc(s.desc) + '</small>', (P.styles || []).includes(k))).join('') + '</div></section>';
+    h += '<section class="card"><h2>Stil</h2><p class="muted small">Mehrfachauswahl. Jeder Stil hat eigene Regeln – etwa welche Farben zusammenpassen, wie viele Muster er verträgt und wie die Lagen aufeinander folgen.</p><div class="chips stylechips">' +
+      Object.entries(E.STYLES).map(([k, s]) => chip('pf-multi', 'data-k="styles" data-v="' + k + '"', esc(s.name) + '<small>' + esc(s.desc) + '</small>', (P.styles || []).includes(k))).join('') + '</div>' +
+      '<button class="btn" data-act="rules" style="margin-top:12px">Farb- und Lagenregeln ansehen</button></section>';
     h += '<section class="card"><h2>Farben</h2><label class="f">Lieblingsfarben</label><div class="chips">' + E.COLORS.map(c => swatchChip('pf-multi', 'data-k="favColors" data-v="' + c.id + '"', c.id, (P.favColors || []).includes(c.id))).join('') + '</div>' +
       '<label class="f">No-Go-Farben <small>– Teile in diesen Farben schlage ich nicht vor</small></label><div class="chips">' + E.COLORS.map(c => swatchChip('pf-multi', 'data-k="nogoColors" data-v="' + c.id + '"', c.id, (P.nogoColors || []).includes(c.id))).join('') + '</div></section>';
     h += '<section class="card"><h2>Typ</h2>' +
@@ -446,7 +452,7 @@
       '<div class="row"><button class="btn tape-btn" data-act="backup">Sicherung erstellen</button><button class="btn" data-act="restore">Sicherung laden</button></div>' +
       '<label class="f">Speicherplatz</label><p class="muted small" id="storage">' + S.items.length + ' Teile, Fotos zusammen ' + mb(S.photoBytes) + '.</p>' +
       '<div class="row" style="margin-top:14px"><button class="btn ghost" data-act="learn-reset">Gelerntes zurücksetzen</button><button class="btn ghost danger" data-act="wipe">Alle Daten löschen</button></div></section>';
-    return h + '<p class="muted small" style="text-align:center">Mein Kleiderschrank, Version 1.2.1</p></div>';
+    return h + '<p class="muted small" style="text-align:center">Mein Kleiderschrank, Version 1.3</p></div>';
   }
 
   // ------------------------------------------------------------ Rendern
@@ -573,7 +579,7 @@
       h += '<div class="chips">' + mats.map(([k, m]) => chip('ed-mat', 'data-k="' + k + '"', esc(m.name), (it.materials || []).includes(k))).join('') +
         (ED.allMats ? '' : '<button class="chip" data-act="ed-allmats" aria-pressed="false">Weitere …</button>') + '</div>';
       if (!['shoes', 'acc', 'other'].includes(slot) || ['hut', 'schal'].includes(it.type)) {
-        h += '<label class="f">Dicke <small>– ' + (it.type === 'hut' ? '1–2 = Sommerhut, 3–5 = Winterhut' : 'wie warm hält das Teil?') + '</small></label><div class="scale" role="group" aria-label="Dicke">' + [1, 2, 3, 4, 5].map(n => '<button data-act="ed-warmth" data-n="' + n + '" aria-pressed="' + (it.warmth === n) + '"><b>' + n + '</b>' + E.WARMTH[n] + '</button>').join('') + '</div>';
+        h += '<label class="f">Dicke <small>– ' + (it.type === 'hut' ? '1–2 = Sommerhut, 3–5 = Winterhut' : it.type === 'strumpfhose' ? '1 = hauchdünn (bis 20 den), 2 = 30–40 den, 3 = blickdicht (60–80 den), 4 = 100 den oder Wolle, 5 = Thermo' : 'wie warm hält das Teil?') + '</small></label><div class="scale" role="group" aria-label="Dicke">' + [1, 2, 3, 4, 5].map(n => '<button data-act="ed-warmth" data-n="' + n + '" aria-pressed="' + (it.warmth === n) + '"><b>' + n + '</b>' + E.WARMTH[n] + '</button>').join('') + '</div>';
       }
       if (['top', 'mid', 'bottom', 'onepiece'].includes(slot)) {
         h += '<label class="f">Passform</label><div class="chips">' + Object.entries(E.FITS).map(([k, n]) => chip('ed-fit', 'data-k="' + k + '"', n, (it.fit || 'normal') === k)).join('') + '</div>';
@@ -699,7 +705,7 @@
       }
       SW = { idx, slot, accId, alts };
       if (!alts.length) h += '<p class="muted">Kein anderes passendes Teil im Schrank.</p>';
-      else h += '<div class="pickgrid">' + alts.map((a, i) => a.id ? tileHTML(byId(a.id), { act: 'swap-pick', data: 'data-i="' + i + '"', label: typeOf(byId(a.id)).name, aria: itemLabel(byId(a.id)) })
+      else h += '<div class="pickgrid">' + alts.map((a, i) => a.id ? tileHTML(byId(a.id), { act: 'swap-pick', data: 'data-i="' + i + '"', label: byId(a.id).type === 'strumpfhose' ? E.TIGHTS[byId(a.id).warmth || 2].replace(/^./, c => c.toUpperCase()) : typeOf(byId(a.id)).name, aria: itemLabel(byId(a.id)) })
         : '<button class="tile alt-none" data-act="swap-pick" data-i="' + i + '"><span class="img">Ohne</span><span class="lbl">Weglassen</span></button>').join('') + '</div>';
       return h;
     };
@@ -737,7 +743,7 @@
     await DB.putMany('items', S.items);
   }
   function laundrySheet(slots) {
-    const ids = ['top', 'mid', 'bottom', 'onepiece'].map(s => slots[s]).filter(Boolean);
+    const ids = ['under', 'top', 'mid', 'layer', 'onepiece', 'bottom', 'legs'].map(s => slots[s]).filter(Boolean);
     LS = { ids, sel: new Set() };
     return () => sheetHead('Getragen ✓') + '<p>Was kommt danach in die Wäsche? Diese Teile schlage ich erst wieder vor, wenn du sie zurücklegst.</p><div class="pickgrid">' +
       LS.ids.map(byId).filter(Boolean).map(i => tileHTML(i, { act: 'laundry-toggle', data: 'data-id="' + i.id + '"', label: (LS.sel.has(i.id) ? '🧺 ' : '') + typeOf(i).name, badge: LS.sel.has(i.id) ? 'Wäsche' : '' })).join('') + '</div>' +
@@ -748,6 +754,35 @@
   function dislikeSheet(idx) {
     return () => sheetHead('Was passt nicht?') + '<p class="muted">Damit ich dazulerne. Dieses Outfit schlage ich nicht mehr vor.</p><div style="display:grid;gap:8px">' +
       Object.entries(REASONS).map(([k, n]) => '<button class="btn block" data-act="dislike-reason" data-o="' + idx + '" data-r="' + k + '">' + esc(n) + '</button>').join('') + '</div>';
+  }
+
+  // Farb- und Lagenregeln der gewählten Stile
+  function rulesSheet() {
+    const ids = (S.profile.styles || []).length ? S.profile.styles : Object.keys(E.STYLES);
+    const dots = cs => '<span class="rule-dots">' + cs.map(c => '<span class="rd"><span class="dot" style="background:' + colorOf(c).hex + '"></span>' + esc(colorOf(c).name) + '</span>').join('') + '</span>';
+    const pair = ([a, b, why]) => '<li><span class="pair"><span class="dot" style="background:' + colorOf(a).hex + '"></span><span class="dot" style="background:' + colorOf(b).hex + '"></span></span>' + esc(why) + '</li>';
+    let h = sheetHead('Farb- und Lagenregeln') + '<p class="muted small">So kombiniert die App für ' + ((S.profile.styles || []).length ? 'deine Stile' : 'alle Stile – wähle oben deine aus') + '. Gefällt dir eine Kombination trotzdem nicht, lehne das Outfit mit „Farben passen nicht“ ab, dann lernt die App dazu.</p>';
+    for (const id of ids) {
+      const r = E.styleRules(id); if (!r) continue;
+      h += '<section class="rules"><h3>' + esc(r.name) + '</h3>' +
+        '<div class="rrow"><span class="rk">Grundfarben</span>' + dots(r.base) + '</div>' +
+        (r.accents.length ? '<div class="rrow"><span class="rk">Akzente</span>' + dots(r.accents) + '</div>' : '') +
+        (r.avoid.length ? '<div class="rrow"><span class="rk">Passt nicht</span>' + dots(r.avoid) + '</div>' : '') +
+        (r.good.length ? '<div class="rrow"><span class="rk">Gute Paare</span><ul class="pairs">' + r.good.map(pair).join('') + '</ul></div>' : '') +
+        (r.bad.length ? '<div class="rrow"><span class="rk">Vermeiden</span><ul class="pairs bad">' + r.bad.map(pair).join('') + '</ul></div>' : '') +
+        '<div class="rrow"><span class="rk">Kontrast</span><span>' + esc(r.contrast || 'Frei') + (r.warm ? '. Warme Farbwelt bevorzugt' : '') + '</span></div>' +
+        '<div class="rrow"><span class="rk">Maß halten</span><span>' + r.limits.map(esc).join('. ') + '</span></div>' +
+        (r.layers.length ? '<div class="rrow"><span class="rk">Lagen</span><ul class="plain">' + r.layers.map(x => '<li>' + esc(x) + '</li>').join('') + '</ul></div>' : '') +
+        (r.legs.length ? '<div class="rrow"><span class="rk">Beine</span><span>' + r.legs.map(esc).join(' ') + '</span></div>' : '') +
+        '</section>';
+    }
+    h += '<section class="rules"><h3>Für alle Stile</h3><ul class="plain">' +
+      '<li>Farben, die sich fast gleichen, wirken wie ein Versehen – etwa Schwarz neben Dunkelblau oder Weiß neben Creme.</li>' +
+      '<li>Dünne Lagen innen, dickere außen. Weites passt nicht unter Enges, ein Sakko nicht unter die Leder- oder Jeansjacke.</li>' +
+      '<li>Drei Lagen nur, wenn es kühl ist und der Stil sie mag. Über 20 °C schlage ich keine dritte Lage vor.</li>' +
+      '<li>Unter Rock und Kleid: bei Kühle blickdichte Strumpfhose, am besten im Ton von Schuhen oder Rock. Unter der Hose nur bei Frost.</li>' +
+      '<li>Helle Schuhe zu dunkler, blickdichter Strumpfhose unterbrechen das Bein. Gemusterte Strumpfhose nur zu einfarbigem Rock oder Kleid.</li></ul></section>';
+    return h;
   }
 
   function pinPickSheet() {
@@ -938,7 +973,7 @@
     async 'rev-fav'(el) { const it = byId(el.dataset.id); if (!it) return; it.fav = true; await DB.put('items', it); invalidate(); rerender(); toast('Als Lieblingsteil markiert'); },
     async 'rev-del'(el) { if (!confirm('Dieses Teil endgültig löschen?')) return; await deleteItem(el.dataset.id); rerender(); toast('Gelöscht'); },
     'gap-have'(el) {
-      openEditor(null, { type: el.dataset.type, colors: [el.dataset.c], materials: el.dataset.m ? [el.dataset.m] : [], warmth: clamp(E.TYPES[el.dataset.type].w || 2, 1, 5), formality: clamp(E.TYPES[el.dataset.type].f || 3, 1, 5) });
+      openEditor(null, { type: el.dataset.type, colors: [el.dataset.c], materials: el.dataset.m ? [el.dataset.m] : [], warmth: clamp(+el.dataset.w || E.TYPES[el.dataset.type].w || 2, 1, 5), formality: clamp(E.TYPES[el.dataset.type].f || 3, 1, 5) });
       ED.fromGap = true; refreshSheet(true);
     },
     'gap-hide'(el) { S.gapHidden.push(el.dataset.id); saveKV('gapHidden', S.gapHidden); rerender(); toast('Ausgeblendet', 'Rückgängig', () => { S.gapHidden.pop(); saveKV('gapHidden', S.gapHidden); rerender(); }); },
@@ -962,6 +997,7 @@
     },
     pin(el) { S.pinnedId = el.dataset.id; invalidate(); closeSheet(); S.view = 'outfits'; render(); toast('Festgepinnt – die Vorschläge bauen darauf auf'); },
     unpin() { S.pinnedId = null; invalidate(); rerender(); },
+    rules() { openSheet(rulesSheet, 'Farb- und Lagenregeln'); },
     'pin-pick'() { if (!S.items.length) return toast('Füge zuerst Teile zum Schrank hinzu.'); openSheet(pinPickSheet, 'Teil festpinnen'); },
     'pin-cat'(el) { S.pinCat = el.dataset.k; refreshSheet(); },
     async like(el) {

@@ -1,6 +1,6 @@
 /* Offline-Unterstützung: App-Dateien werden zwischengespeichert.
    Eigene Dateien: erst Netz (für Updates), sonst Zwischenspeicher. */
-const CACHE = 'kleiderschrank-v1-2-1';
+const CACHE = 'kleiderschrank-v1-3';
 const ASSETS = ['./', './index.html', './app.js', './engine.js', './manifest.webmanifest',
   './icon-192.png', './icon-512.png', './icon-maskable.png',
   './barlow-400.woff2', './barlow-500.woff2', './barlow-600.woff2', './barlow-condensed-600.woff2'];

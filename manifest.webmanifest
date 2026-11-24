@@ -1,0 +1,17 @@
+{
+  "name": "Mein Kleiderschrank",
+  "short_name": "Kleiderschrank",
+  "description": "Digitaler Kleiderschrank mit Outfit-Vorschlägen passend zu Wetter, Anlass und Stil.",
+  "lang": "de",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#edeff3",
+  "theme_color": "#1b2742",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
